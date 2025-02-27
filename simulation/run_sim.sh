@@ -12,3 +12,5 @@ module load R
 # This stores which job is running (1, 2, 3, etc)
 JOBID=$SLURM_ARRAY_TASK_ID
 Rscript run_simulation.R $JOBID
+
+

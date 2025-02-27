@@ -3,7 +3,7 @@
     "path": "C:/Users/dzha237/BIOS731HW/bios731_hw3_zhang/simulation/run_simulation.R",
     "project_path": "simulation/run_simulation.R",
     "type": "r_source",
-    "hash": "188124232",
+    "hash": "1337077545",
     "contents": "",
     "dirty": false,
     "created": 1740687932921.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "103,0",
-        "scrollLine": "98"
+        "cursorPosition": "19,22",
+        "scrollLine": "17"
     },
     "folds": "",
-    "lastKnownWriteTime": 1740689658,
+    "lastKnownWriteTime": 1740692303,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1740689658786,
+    "last_content_update": 1740692303874,
     "read_only": false,
     "read_only_alternatives": []
 }

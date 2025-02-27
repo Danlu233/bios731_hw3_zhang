@@ -49,7 +49,7 @@ current_params = params[scenario,]
 
 results = as.list(rep(NA, nsim))
 
-for (i in 1:10) {
+for (i in 1:nsim) {
   
   set.seed(seed[i])
   
