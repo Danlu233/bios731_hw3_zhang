@@ -1,0 +1,122 @@
+library(tidyverse)
+library(doParallel)
+
+###############################################################
+## define or source functions used in code below
+###############################################################
+
+source(here::here("source", "01_simulate_data.R"))
+source(here::here("source", "02_apply_method.R"))
+source(here::here("source", "03_extract_estimates.R"))
+source(here::here("source", "04_nonparametric_boot_percentile_ci.R"))
+source(here::here("source", "05_nonparametric_boot_t_ci.R"))
+
+###############################################################
+## set simulation design elements
+###############################################################
+
+#number of simulations
+nsim = (.95*(1-.95))/(.01^2)
+
+nboot = 120 
+nboot_t = 60
+
+alpha = 0.05
+
+n = c(10, 50, 500)
+beta_true = c(0, 0.5, 2)
+epsilon_dist = c("normal", "lognormal")
+
+param_grid = expand.grid(n = n,
+                     n_sim = nsim,
+                     beta_true = beta_true,
+                     epsilon_dist = epsilon_dist,
+                     stringsAsFactors = F)
+
+
+
+# Set up parallel backend with 6 cores
+num_cores = detectCores() - 2
+cl = makeCluster(num_cores)
+registerDoParallel(cl)
+
+
+###############################################################
+## start simulation code
+###############################################################
+
+# generate a random seed for each simulated dataset
+set.seed(111)
+seed = floor(runif(nrow(param_grid), 1, 10000))
+
+foreach(s = 1:nrow(param_grid), .packages = c("tidyverse", "broom")) %dopar% {
+  
+  params = param_grid[s,]
+  
+  set.seed(seed[s])
+  sub_seed = floor(runif(nsim, 1, 10000))
+  
+  results = as.list(rep(NA, nsim))
+  
+  for(i in 1:nsim){
+    
+    tryCatch({
+      
+      set.seed(sub_seed[i])
+      
+      ####################
+      # simulate data
+      simdata = simulate_data(n = params$n, 
+                              true_beta = params$beta_true, 
+                              dist_epsilon = params$epsilon_dist)
+      
+      ###################
+      # apply method(s)
+      fit = fit_model(simdata)
+      
+      # calculate estimates and Wald CI
+      estimates = get_estimates(model_fit = fit,
+                                true_beta = params$beta_true)
+      
+      # calculate nonparametric bootstrap percentile interval
+      boot_percentile = nonpara_boot_percentile(simdata = simdata, 
+                                                nboot = nboot, 
+                                                size = params$n, 
+                                                true_beta = params$beta_true, 
+                                                alpha = alpha)
+      
+      # calculate nonparametric bootstrap t interval
+      boot_t = nonpara_boot_t(simdata = simdata,
+                              nboot = nboot,
+                              nboot_t = nboot_t,
+                              size = params$n,
+                              true_beta = params$beta_true,
+                              alpha = alpha)
+      
+      # store results
+      estimates = estimates %>%
+        mutate(coverage_p = boot_percentile$coverage,
+               time_p = boot_percentile$time,
+               coverage_t = boot_t$coverage,
+               time_t = boot_t$time,
+               true_beta = params$beta_true,
+               n = params$n,
+               epsilon_dist = params$epsilon_dist)
+      
+      
+      results[[i]] = estimates
+      
+    })
+    
+  }
+  
+  ####################
+  # save results
+  
+  filename = paste0("scenario_", s, ".RDA")
+  save(results,
+       file = here::here("data", filename))
+  
+}
+
+stopImplicitCluster()
