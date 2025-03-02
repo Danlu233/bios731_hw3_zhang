@@ -100,7 +100,7 @@ for (i in 1:nsim) {
 # save results
 filename = paste0("scenario_", scenario, ".RDA")
 save(results,
-     file = here::here("result", filename))
+     file = here::here("data", filename))
 
 
 
