@@ -3,7 +3,7 @@ library(ggplot2)
 
 # read in all simulation results
 
-rda_files <- list.files(here::here("result"), pattern = "\\.RDA$", full.names = TRUE)
+rda_files <- list.files(here::here("data"), pattern = "\\.RDA$", full.names = TRUE)
 
 all_results = NA
 for (i in 1:length(rda_files)) {
@@ -37,15 +37,15 @@ dev.off()
 
 # coverage of beta hat
 
-dat_coverage = all_results %>% mutate(coverage = ifelse(coverage_lower + coverage_upper == 2, 1, 0)) %>% 
+dat_coverage = all_results %>% mutate(coverage = (lower <= true_beta & upper >= true_beta)) %>% 
   group_by(true_beta, error_distribution, method) %>%
   summarise(coverage = mean(coverage), n = n()) %>% 
   mutate(coverage_se = sqrt(coverage * (1 - coverage) / n), 
-         lower = coverage - 1.96*coverage_se, upper = coverage + 1.96*coverage_se)
+         coverage_lower = coverage - 1.96*coverage_se, coverage_upper = coverage + 1.96*coverage_se)
 
 p = ggplot(dat_coverage, aes(x = error_distribution, y = coverage, color = method)) + 
   geom_point(size = 3, position = position_dodge(width = 0.4)) +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, position = position_dodge(width = 0.4)) +
+  geom_errorbar(aes(ymin = coverage_lower, ymax = coverage_upper), width = 0.2, position = position_dodge(width = 0.4)) +
   geom_hline(aes(yintercept = 0.95), lty = "dashed") +
   facet_grid(cols = vars(true_beta),
              labeller = labeller(true_beta = function(x) paste0("True beta = ", x))) + 
@@ -56,37 +56,35 @@ png(here::here("result","figure_for_coverage.png"), width = 720, height = 540)
 p
 dev.off()
 
-# Power
+# Power for true beta != 0
 
-dat_power = 
+dat_power = all_results %>% 
+  group_by(true_beta, error_distribution, method) %>%
+  summarise(value = mean((lower > 0) | (upper < 0)), n = n()) %>%
+  mutate(value_se = sqrt(value * (1 - value) / n), 
+         value_lower = value - 1.96*value_se, value_upper = value + 1.96*value_se)
+
+dat_power$true_beta = factor(dat_power$true_beta, 
+                             levels = c(0,0.5),
+                             labels = c("Type I error", "Power"))
 
 
+p = ggplot(dat_power, aes(x = error_distribution, y = value, color = method)) + 
+  geom_point(size = 3, position = position_dodge(width = 0.4)) +
+  geom_errorbar(aes(ymin = value_lower, ymax = value_upper), width = 0.2, position = position_dodge(width = 0.4)) +
+  geom_hline(aes(yintercept = 0.8), lty = "dashed") +
+  geom_hline(aes(yintercept = 0.05), lty = "dashed") +
+  facet_grid(cols = vars(true_beta)) + 
+  labs(x = "Error distribution", y = "Values") + 
+  theme(text = element_text(size = 22), legend.position = "bottom")
 
-
-# computation time
-dat_time_w = all_results %>% 
-  summarise(time = mean(time_wald)) %>% 
-  mutate(method = "Wald confidence intervals")
-
-dat_time_p = all_results %>% 
-  summarise(time = mean(time_p)) %>% mutate(method = "bootstrap percentile intervals")
-
-dat_time_t = all_results %>% 
-  summarise(time = mean(time_t)) %>% mutate(method = "bootstrap t intervals")
-
-dat_time = rbind(dat_time_w, dat_time_p, dat_time_t)
-
-write.csv(dat_time, here::here("results","computation_time.csv"), row.names = F)
-
-# distribution of se
-p = ggplot(all_results, aes(x = std.error, color = factor(n))) + 
-  geom_density(linewidth = 1) + 
-  facet_grid(rows = vars(epsilon_dist), cols = vars(true_beta),
-             labeller = labeller(true_beta = function(x) paste0("True beta = ", x)),
-             scales = "free_y") +
-  labs(x = "Standard Error", y = "Density", color = "Sample Size (n)") + 
-  theme(text = element_text(size = 20), legend.position = "bottom")
-
-png(here::here("results","figure_for_se.png"), width = 720, height = 540)
+png(here::here("result","figure_for_power.png"), width = 720, height = 540)
 p
 dev.off()
+
+# computation time
+dat_time = all_results %>% group_by(method) %>%
+  summarise(time = mean(time)) 
+
+write.csv(dat_time, here::here("result","time.csv"), row.names = F)
+

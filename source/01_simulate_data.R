@@ -1,7 +1,12 @@
 # load libraries
 library(tidyverse)
 
-# function
+# function to simulate data
+# n: sample size
+# beta_treat: true beta of treatment
+# error_distribution: either Normal or Gamma
+# output includes x and y
+
 get_simdata = function(n, beta_treat, error_distribution){
   beta0 = 1
   x = rbinom(n, 1, prob = 0.5)

@@ -1,6 +1,8 @@
 library(broom)
 library(tidyverse)
 
+# output for both functions include beta_hat, standard error, lower and upper bound of CI and method of CI
+
 get_estimates = function(model_fit, true_beta){
   
   tidy(model_fit, conf.int = TRUE) %>%
